@@ -24,21 +24,28 @@ export class AuthService {
     return this.http.get<CurrentUserInterface>(url);
   }
 
-  register(registerRequest: RegisterRequestInterface): Observable<CurrentUserInterface>{
+  register(
+    registerRequest: RegisterRequestInterface
+  ): Observable<CurrentUserInterface> {
     const url = environment.apiUrl + '/users';
-    return this.http.post<CurrentUserInterface>(url,registerRequest);
+    return this.http.post<CurrentUserInterface>(url, registerRequest);
   }
 
-  login(loginRequest: LoginRequestInterface): Observable<CurrentUserInterface>{
+  login(loginRequest: LoginRequestInterface): Observable<CurrentUserInterface> {
     const url = environment.apiUrl + '/users/login';
-    return this.http.post<CurrentUserInterface>(url,loginRequest);
+    return this.http.post<CurrentUserInterface>(url, loginRequest);
   }
 
-  setToken(token: string){
-    localStorage.setItem('token',token);
+  setToken(token: string) {
+    localStorage.setItem('token', token);
   }
 
   setCurrentUser(currentUser: CurrentUserInterface | null): void {
     this.currentUser$.next(currentUser);
+  }
+
+  logout() {
+    localStorage.removeItem('token');
+    this.currentUser$.next(null);
   }
 }
