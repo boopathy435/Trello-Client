@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { CurrentUserInterface } from '../../types/currentUser.interface';
+import { SocketService } from '../../../shared/services/socket.service';
 
 @Component({
   selector: 'app-login',
@@ -15,7 +16,8 @@ export class LoginComponent {
   constructor(
     private fb: FormBuilder,
     private auth: AuthService,
-    private router: Router
+    private router: Router,
+    private socketService: SocketService
   ) {
     this.form = this.fb.group({
       email: this.fb.control('', Validators.required),
@@ -27,8 +29,9 @@ export class LoginComponent {
       next: (response: CurrentUserInterface) => {
         this.auth.setToken(response.token);
         this.auth.setCurrentUser(response);
+        this.socketService.setSocketConnection(response);
         this.errorMessage = null;
-        this.router.navigateByUrl('/');
+        this.router.navigateByUrl('/boards');
       },
       error: (err: HttpErrorResponse) => {
         console.log('Error:', err.error);

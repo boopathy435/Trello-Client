@@ -19,4 +19,9 @@ export class BoardsService {
     const url = environment.apiUrl + '/boards';
     return this.http.post<BoardInterface>(url, { title });
   }
+
+  getBoard(boardId: string): Observable<BoardInterface> {
+    const url = `${environment.apiUrl}/boards/${boardId}`;
+    return this.http.get<BoardInterface>(url);
+  }
 }

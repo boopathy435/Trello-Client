@@ -12,10 +12,11 @@ import { AuthModule } from './auth/auth.module';
 import { AuthInterceptor } from './auth/services/authinterceptor.service';
 import { HomeModule } from './home/home.module';
 import { BoardsModule } from './boards/boards.module';
+import { BoardModule } from './board/board.module';
 
 @NgModule({
   declarations: [AppComponent],
-  imports: [BrowserModule, AppRoutingModule, AuthModule, HomeModule,BoardsModule],
+  imports: [BrowserModule, AppRoutingModule, AuthModule, HomeModule,BoardsModule,BoardModule],
   providers: [
     provideHttpClient(withInterceptorsFromDi()),
     {
