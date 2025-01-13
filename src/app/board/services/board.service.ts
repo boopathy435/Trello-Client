@@ -42,4 +42,13 @@ export class BoardService {
     const tasks = [...this.tasks$.getValue(), task];
     this.tasks$.next(tasks);
   }
+
+  updateBoard(updatedBoard: BoardInterface) {
+    const board = this.board$.getValue();
+    if (!board) {
+      throw new Error('Board is not initialized');
+    }
+
+    this.board$.next({ ...board, title: updatedBoard.title });
+  }
 }
