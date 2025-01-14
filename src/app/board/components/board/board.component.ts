@@ -10,8 +10,8 @@ import { ColumnInterface } from '../../../shared/types/column.interface';
 import { ColumnInputInterface } from '../../../shared/types/columnInput.interface';
 import { SocketEventsEnum } from '../../../shared/types/socketEvents.enum';
 import { TaskInterface } from '../../../shared/types/task.interface';
-import { BoardService } from '../../services/board.service';
 import { TaskInputInterface } from '../../../shared/types/taskInput.interface';
+import { BoardService } from '../../services/board.service';
 
 @Component({
   selector: 'app-board',
@@ -65,6 +65,8 @@ export class BoardComponent implements OnInit {
     this.socketService
       .listen<ColumnInterface>(SocketEventsEnum.columnsCreateSuccess)
       .subscribe((column: ColumnInterface) => {
+        console.log('columnsCreateSuccess:',column);
+        
         this.boardService.addColumn(column);
       });
 
@@ -74,10 +76,22 @@ export class BoardComponent implements OnInit {
         this.boardService.addTask(task);
       });
 
-      this.socketService
+    this.socketService
       .listen<BoardInterface>(SocketEventsEnum.boardsUpdateSuccess)
       .subscribe((updatedBoard) => {
         this.boardService.updateBoard(updatedBoard);
+      });
+
+    this.socketService
+      .listen<void>(SocketEventsEnum.boardsDeleteSuccess)
+      .subscribe(() => {
+        this.router.navigateByUrl('/boards');
+      });
+
+      this.socketService
+      .listen<string>(SocketEventsEnum.columnsDeleteSuccess)
+      .subscribe((columnId) => {
+        this.boardService.deleteColumn(columnId)
       });
   }
 
@@ -118,6 +132,18 @@ export class BoardComponent implements OnInit {
 
   updateBoardName(boardName: string) {
     this.boardsService.updateBoard(this.boardId, { title: boardName });
+  }
+
+  deleteBoard() {
+    if (confirm('Are sure want to delete the board?')) {
+      this.boardsService.deleteBoard(this.boardId);
+    }
+  }
+
+  deleteColumn(columnId: string) {
+    if (confirm('Are sure want to delete the column?')) {
+      this.columnsService.deleteColumn(this.boardId, columnId);
+    }
   }
 
   test() {

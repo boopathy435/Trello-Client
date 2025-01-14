@@ -31,6 +31,8 @@ export class BoardService {
 
   addColumn(column: ColumnInterface) {
     const columns = [...this.columns$.getValue(), column];
+    console.log('columns:',columns);
+    
     this.columns$.next(columns);
   }
 
@@ -50,5 +52,10 @@ export class BoardService {
     }
 
     this.board$.next({ ...board, title: updatedBoard.title });
+  }
+
+  deleteColumn(columnId: string){
+    const updatedColumn = this.columns$.getValue().filter(each=>each.id!==columnId);
+    this,this.columns$.next(updatedColumn);
   }
 }
