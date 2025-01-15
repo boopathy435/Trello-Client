@@ -1,6 +1,13 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, NavigationStart, Router } from '@angular/router';
-import { combineLatest, filter, map, Observable } from 'rxjs';
+import {
+  combineLatest,
+  filter,
+  map,
+  Observable,
+  Subject,
+  takeUntil,
+} from 'rxjs';
 import { BoardsService } from '../../../shared/services/boards.service';
 import { ColumnsService } from '../../../shared/services/columns.service';
 import { SocketService } from '../../../shared/services/socket.service';
@@ -14,16 +21,18 @@ import { TaskInputInterface } from '../../../shared/types/taskInput.interface';
 import { BoardService } from '../../services/board.service';
 
 @Component({
-  selector: 'app-board',
+  selector: 'board',
   templateUrl: './board.component.html',
 })
-export class BoardComponent implements OnInit {
-  boardId!: string;
+export class BoardComponent implements OnInit, OnDestroy {
+  boardId: string;
   data$: Observable<{
     board: BoardInterface;
     columns: ColumnInterface[];
     tasks: TaskInterface[];
   }>;
+  unsubscribe$ = new Subject<void>();
+
   constructor(
     private boardsService: BoardsService,
     private route: ActivatedRoute,
@@ -36,7 +45,7 @@ export class BoardComponent implements OnInit {
     const boardId = this.route.snapshot.paramMap.get('boardId');
 
     if (!boardId) {
-      throw new Error("Can't get board id from url");
+      throw new Error('Cant get boardID from url');
     }
 
     this.boardId = boardId;
@@ -44,7 +53,13 @@ export class BoardComponent implements OnInit {
       this.boardService.board$.pipe(filter(Boolean)),
       this.boardService.columns$,
       this.boardService.tasks$,
-    ]).pipe(map(([board, columns, tasks]) => ({ board, columns, tasks })));
+    ]).pipe(
+      map(([board, columns, tasks]) => ({
+        board,
+        columns,
+        tasks,
+      }))
+    );
   }
 
   ngOnInit(): void {
@@ -55,49 +70,78 @@ export class BoardComponent implements OnInit {
     this.initializeListeners();
   }
 
-  initializeListeners() {
+  ngOnDestroy(): void {
+    this.unsubscribe$.next();
+    this.unsubscribe$.complete();
+  }
+
+  initializeListeners(): void {
     this.router.events.subscribe((event) => {
-      if (event instanceof NavigationStart) {
+      if (event instanceof NavigationStart && !event.url.includes('/boards/')) {
         this.boardService.leaveBoard(this.boardId);
       }
     });
 
     this.socketService
       .listen<ColumnInterface>(SocketEventsEnum.columnsCreateSuccess)
-      .subscribe((column: ColumnInterface) => {
-        console.log('columnsCreateSuccess:',column);
-        
+      .pipe(takeUntil(this.unsubscribe$))
+      .subscribe((column) => {
         this.boardService.addColumn(column);
       });
 
     this.socketService
+      .listen<string>(SocketEventsEnum.columnsDeleteSuccess)
+      .pipe(takeUntil(this.unsubscribe$))
+      .subscribe((columnId) => {
+        this.boardService.deleteColumn(columnId);
+      });
+
+    this.socketService
       .listen<TaskInterface>(SocketEventsEnum.tasksCreateSuccess)
-      .subscribe((task: TaskInterface) => {
+      .pipe(takeUntil(this.unsubscribe$))
+      .subscribe((task) => {
         this.boardService.addTask(task);
       });
 
     this.socketService
       .listen<BoardInterface>(SocketEventsEnum.boardsUpdateSuccess)
+      .pipe(takeUntil(this.unsubscribe$))
       .subscribe((updatedBoard) => {
         this.boardService.updateBoard(updatedBoard);
       });
 
     this.socketService
+      .listen<ColumnInterface>(SocketEventsEnum.columnsUpdateSuccess)
+      .pipe(takeUntil(this.unsubscribe$))
+      .subscribe((updatedColumn) => {
+        this.boardService.updateColumn(updatedColumn);
+      });
+
+    this.socketService
+      .listen<TaskInterface>(SocketEventsEnum.tasksUpdateSuccess)
+      .pipe(takeUntil(this.unsubscribe$))
+      .subscribe((updatedTask) => {
+        this.boardService.updateTask(updatedTask);
+      });
+
+    this.socketService
+      .listen<string>(SocketEventsEnum.tasksDeleteSuccess)
+      .pipe(takeUntil(this.unsubscribe$))
+      .subscribe((taskId) => {
+        this.boardService.deleteTask(taskId);
+      });
+
+    this.socketService
       .listen<void>(SocketEventsEnum.boardsDeleteSuccess)
+      .pipe(takeUntil(this.unsubscribe$))
       .subscribe(() => {
         this.router.navigateByUrl('/boards');
       });
-
-      this.socketService
-      .listen<string>(SocketEventsEnum.columnsDeleteSuccess)
-      .subscribe((columnId) => {
-        this.boardService.deleteColumn(columnId)
-      });
   }
 
-  fetchData() {
-    this.boardsService.getBoard(this.boardId).subscribe((res) => {
-      this.boardService.setBoard(res);
+  fetchData(): void {
+    this.boardsService.getBoard(this.boardId).subscribe((board) => {
+      this.boardService.setBoard(board);
     });
     this.columnsService.getColumns(this.boardId).subscribe((columns) => {
       this.boardService.setColumns(columns);
@@ -107,22 +151,20 @@ export class BoardComponent implements OnInit {
     });
   }
 
-  createColumn(title: string) {
+  createColumn(title: string): void {
     const columnInput: ColumnInputInterface = {
       title,
       boardId: this.boardId,
     };
-
     this.columnsService.createColumn(columnInput);
   }
 
-  createTask(title: string, columnId: string) {
+  createTask(title: string, columnId: string): void {
     const taskInput: TaskInputInterface = {
       title,
       boardId: this.boardId,
       columnId,
     };
-
     this.tasksService.createTask(taskInput);
   }
 
@@ -130,26 +172,27 @@ export class BoardComponent implements OnInit {
     return tasks.filter((task) => task.columnId === columnId);
   }
 
-  updateBoardName(boardName: string) {
+  updateBoardName(boardName: string): void {
     this.boardsService.updateBoard(this.boardId, { title: boardName });
   }
 
-  deleteBoard() {
-    if (confirm('Are sure want to delete the board?')) {
+  deleteBoard(): void {
+    if (confirm('Are you sure you want to delete the board?')) {
       this.boardsService.deleteBoard(this.boardId);
     }
   }
 
-  deleteColumn(columnId: string) {
-    if (confirm('Are sure want to delete the column?')) {
-      this.columnsService.deleteColumn(this.boardId, columnId);
-    }
+  deleteColumn(columnId: string): void {
+    this.columnsService.deleteColumn(this.boardId, columnId);
   }
 
-  test() {
-    this.socketService.emit(SocketEventsEnum.columnsCreate, {
-      boardId: this.boardId,
-      title: 'foo',
+  updateColumnName(columnName: string, columnId: string): void {
+    this.columnsService.updateColumn(this.boardId, columnId, {
+      title: columnName,
     });
+  }
+
+  openTask(taskId: string): void {
+    this.router.navigate(['boards', this.boardId, 'tasks', taskId]);
   }
 }

@@ -16,46 +16,77 @@ export class BoardService {
 
   constructor(private socketService: SocketService) {}
 
-  setBoard(board: BoardInterface) {
+  setBoard(board: BoardInterface): void {
     this.board$.next(board);
   }
 
-  leaveBoard(boardId: string) {
+  setColumns(columns: ColumnInterface[]): void {
+    this.columns$.next(columns);
+  }
+
+  setTasks(tasks: TaskInterface[]): void {
+    this.tasks$.next(tasks);
+  }
+
+  leaveBoard(boardId: string): void {
     this.board$.next(null);
     this.socketService.emit(SocketEventsEnum.boardsLeave, { boardId });
   }
 
-  setColumns(columns: ColumnInterface[]) {
-    this.columns$.next(columns);
+  addColumn(column: ColumnInterface): void {
+    const updatedColumns = [...this.columns$.getValue(), column];
+    this.columns$.next(updatedColumns);
   }
 
-  addColumn(column: ColumnInterface) {
-    const columns = [...this.columns$.getValue(), column];
-    console.log('columns:',columns);
-    
-    this.columns$.next(columns);
+  addTask(task: TaskInterface): void {
+    const updatedTasks = [...this.tasks$.getValue(), task];
+    this.tasks$.next(updatedTasks);
   }
 
-  setTasks(tasks: TaskInterface[]) {
-    this.tasks$.next(tasks);
-  }
-
-  addTask(task: TaskInterface) {
-    const tasks = [...this.tasks$.getValue(), task];
-    this.tasks$.next(tasks);
-  }
-
-  updateBoard(updatedBoard: BoardInterface) {
+  updateBoard(updatedBoard: BoardInterface): void {
     const board = this.board$.getValue();
     if (!board) {
       throw new Error('Board is not initialized');
     }
-
     this.board$.next({ ...board, title: updatedBoard.title });
   }
 
-  deleteColumn(columnId: string){
-    const updatedColumn = this.columns$.getValue().filter(each=>each.id!==columnId);
-    this,this.columns$.next(updatedColumn);
+  updateColumn(updatedColumn: ColumnInterface): void {
+    const updatedColumns = this.columns$.getValue().map((column) => {
+      if (column.id === updatedColumn.id) {
+        return { ...column, title: updatedColumn.title };
+      }
+      return column;
+    });
+    this.columns$.next(updatedColumns);
+  }
+
+  updateTask(updatedTask: TaskInterface): void {
+    const updatedTasks = this.tasks$.getValue().map((task) => {
+      if (task.id === updatedTask.id) {
+        return {
+          ...task,
+          title: updatedTask.title,
+          description: updatedTask.description,
+          columnId: updatedTask.columnId,
+        };
+      }
+      return task;
+    });
+    this.tasks$.next(updatedTasks);
+  }
+
+  deleteColumn(columnId: string): void {
+    const updatedColumns = this.columns$
+      .getValue()
+      .filter((column) => column.id !== columnId);
+    this.columns$.next(updatedColumns);
+  }
+
+  deleteTask(taskId: string): void {
+    const updatedTasks = this.tasks$
+      .getValue()
+      .filter((task) => task.id !== taskId);
+    this.tasks$.next(updatedTasks);
   }
 }

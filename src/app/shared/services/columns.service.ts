@@ -24,4 +24,8 @@ export class ColumnsService {
   deleteColumn(boardId: string, columnId: string) {
     this.socketService.emit(SocketEventsEnum.columnsDelete, {boardId,columnId});
   }
+
+  updateColumn(boardId: string, columnId: string, fields: {title: string}) {
+    this.socketService.emit(SocketEventsEnum.columnsUpdate, {boardId,columnId,fields});
+  }
 }

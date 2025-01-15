@@ -12,10 +12,25 @@
   </div>
   <div class="columns">
     <div class="column" *ngFor="let column of data.columns">
-      <div class="column-title">{{ column.title }} <img src="/assets/close_icon.svg" alt="delete icon" class="column-delete-icon" (click)="deleteColumn(column.id)"></div>
+      <div class="column-title">
+        <inline-form
+          class="edit-column-form"
+          [defaultText]="column.title"
+          [title]="column.title"
+          (handleSubmit)="updateColumnName($event, column.id)"
+        ></inline-form>
+
+        <img
+          src="/assets/close_icon.svg"
+          alt="delete icon"
+          class="column-delete-icon"
+          (click)="deleteColumn(column.id)"
+        />
+      </div>
       <div
         class="task"
         *ngFor="let task of getTasksByColumn(column.id, data.tasks)"
+        (click)="openTask(task.id)"
       >
         {{ task.title }}
       </div>
@@ -38,3 +53,5 @@
     ></inline-form>
   </div>
 </div>
+
+<router-outlet></router-outlet>
